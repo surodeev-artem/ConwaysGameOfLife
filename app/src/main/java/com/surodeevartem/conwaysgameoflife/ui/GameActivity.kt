@@ -1,6 +1,7 @@
 package com.surodeevartem.conwaysgameoflife.ui
 
 import android.os.Bundle
+import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.Canvas
@@ -17,17 +18,22 @@ import androidx.compose.material.MaterialTheme
 import androidx.compose.material.Surface
 import androidx.compose.material.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.surodeevartem.conwaysgameoflife.R
+import com.surodeevartem.conwaysgameoflife.domain.GameManager
+import com.surodeevartem.conwaysgameoflife.entity.Cell
+import com.surodeevartem.conwaysgameoflife.entity.LifecycleState
 import com.surodeevartem.conwaysgameoflife.ui.theme.ConwaysGameOfLifeTheme
+import com.surodeevartem.conwaysgameoflife.ui.theme.GameFieldBackgroundDark
+import com.surodeevartem.conwaysgameoflife.ui.theme.GameFieldBackgroundLight
 import dagger.hilt.android.AndroidEntryPoint
 
 @AndroidEntryPoint
@@ -40,7 +46,9 @@ class GameActivity : ComponentActivity() {
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colors.background
                 ) {
-                    Content()
+                    Content() {
+                        Toast.makeText(this, "Game over", Toast.LENGTH_LONG).show()
+                    }
                 }
             }
         }
@@ -48,65 +56,41 @@ class GameActivity : ComponentActivity() {
 }
 
 @Composable
-fun Content(viewModel: GameViewModel = viewModel()) {
+fun Content(viewModel: GameViewModel = viewModel(), gameOverCallback: () -> Unit) {
     Column(modifier = Modifier.fillMaxSize()) {
         val cells = viewModel.gameState.cells
-        val isStarted = remember {
-            viewModel.gameState.isStarted
-        }
+        val lifecycleState = viewModel.gameState.lifecycleState
+        val stepsCount = viewModel.gameState.stepsCount
         val darkThemeEnabled = isSystemInDarkTheme()
-        Canvas(
-            modifier = Modifier
+
+        if (lifecycleState == LifecycleState.GAME_OVER) {
+            gameOverCallback()
+        }
+
+        StepsCountText(darkThemeEnabled, stepsCount)
+
+        GameField(
+            Modifier
                 .background(
                     if (darkThemeEnabled)
                         Brush.verticalGradient(
-                            0f to Color(0xff151515),
-                            0.5f to Color(0xff151515),
+                            0f to GameFieldBackgroundDark,
+                            0.5f to GameFieldBackgroundDark,
                             1f to MaterialTheme.colors.background
                         )
                     else
                         Brush.verticalGradient(
-                            0f to Color(0xffebebeb),
-                            0.5f to Color(0xffebebeb),
+                            0f to GameFieldBackgroundLight,
+                            0.5f to GameFieldBackgroundLight,
                             1f to MaterialTheme.colors.background
                         )
                 )
                 .padding(16.dp)
                 .weight(1f)
-                .fillMaxWidth()
-        ) {
-            val canvasWidth = size.width
-            val canvasHeight = size.height
-
-
-            val cellOffset = 2f
-            val cellSize = (canvasWidth - (49 * cellOffset)) / 50
-
-            for (i in cells.indices) {
-                for (j in cells[i].indices) {
-                    drawRect(
-                        color = if (cells[i][j].isAlive) {
-                            if (darkThemeEnabled) {
-                                Color.White
-                            } else {
-                                Color.Black
-                            }
-                        } else {
-                            if (darkThemeEnabled) {
-                                Color.Black
-                            } else {
-                                Color.White
-                            }
-                        },
-                        topLeft = Offset(
-                            x = i * cellSize + i * cellOffset,
-                            y = j * cellSize + j * cellOffset
-                        ),
-                        size = Size(cellSize, cellSize)
-                    )
-                }
-            }
-        }
+                .fillMaxWidth(),
+            darkThemeEnabled,
+            cells
+        )
 
         Row(
             modifier = Modifier
@@ -114,29 +98,92 @@ fun Content(viewModel: GameViewModel = viewModel()) {
                 .padding(16.dp)
         ) {
             Button(modifier = Modifier.weight(1f), onClick = {
-                if (viewModel.gameState.isStarted) viewModel.stop() else viewModel.start()
+                when (viewModel.gameState.lifecycleState) {
+                    LifecycleState.STARTED -> {
+                        viewModel.stop()
+                    }
+
+                    LifecycleState.PAUSED -> {
+                        viewModel.start()
+                    }
+
+                    else -> {
+                        viewModel.randomizeGameField()
+                        viewModel.start()
+                    }
+                }
             }) {
-                Text(text = if (viewModel.gameState.isStarted) "Stop" else "Start")
+                Text(
+                    text = if (viewModel.gameState.lifecycleState == LifecycleState.STARTED) {
+                        stringResource(R.string.stop)
+                    } else {
+                        stringResource(R.string.start)
+                    }
+                )
             }
             Spacer(modifier = Modifier.weight(0.25f))
-            Button(modifier = Modifier.weight(1f), onClick = {
-                viewModel.restartGame()
-            }) {
-                Text(text = "Generate")
+            Button(
+                modifier = Modifier.weight(1f),
+                onClick = {
+                    viewModel.randomizeGameField()
+                }
+            ) {
+                Text(text = stringResource(R.string.regenerate))
             }
         }
     }
 }
 
 @Composable
-fun Greeting(name: String) {
-    Text(text = "Hello $name!")
+fun StepsCountText(darkThemeEnabled: Boolean, stepsCount: Int) {
+    Text(
+        text = String.format(stringResource(R.string.steps_count), stepsCount), modifier = Modifier
+            .fillMaxWidth()
+            .background(
+                if (darkThemeEnabled) {
+                    GameFieldBackgroundDark
+                } else {
+                    GameFieldBackgroundLight
+                }
+            )
+            .padding(16.dp)
+    )
 }
 
-@Preview(showBackground = true)
 @Composable
-fun DefaultPreview() {
-    ConwaysGameOfLifeTheme {
-        Greeting("Android")
+fun GameField(modifier: Modifier, darkThemeEnabled: Boolean, cells: List<List<Cell>>) {
+    Canvas(
+        modifier
+    ) {
+        val canvasWidth = size.width
+
+        val cellsGapSize = 2f
+        val cellsGapSum = ((GameManager.GAME_FIELD_WIDTH - 1) * cellsGapSize)
+        val cellSize = (canvasWidth - cellsGapSum) / GameManager.GAME_FIELD_WIDTH
+
+        for (x in cells.indices) {
+            for (y in cells[x].indices) {
+                drawRect(
+                    color = if (cells[x][y].isAlive) {
+                        if (darkThemeEnabled) {
+                            Color.White
+                        } else {
+                            Color.Black
+                        }
+                    } else {
+                        if (darkThemeEnabled) {
+                            Color.Black
+                        } else {
+                            Color.White
+                        }
+                    },
+                    topLeft = Offset(
+                        x = x * cellSize + x * cellsGapSize,
+                        y = y * cellSize + y * cellsGapSize
+                    ),
+                    size = Size(cellSize, cellSize)
+                )
+            }
+        }
     }
 }

@@ -45,11 +45,11 @@ fun ConwaysGameOfLifeTheme(
 private fun StatusBarColor(darkThemeEnabled: Boolean) {
     val systemUiController = rememberSystemUiController()
     if (darkThemeEnabled) {
-        systemUiController.setSystemBarsColor(
+        systemUiController.setStatusBarColor(
             color = GameFieldBackgroundDark
         )
     } else {
-        systemUiController.setSystemBarsColor(
+        systemUiController.setStatusBarColor(
             color = GameFieldBackgroundLight
         )
     }
