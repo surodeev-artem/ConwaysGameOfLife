@@ -18,7 +18,6 @@ class GameViewModel @Inject constructor(private val gameManager: GameManager) : 
     var gameState by mutableStateOf(GameState())
         private set
 
-
     init {
         randomizeGameField()
 

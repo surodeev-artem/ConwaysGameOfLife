@@ -11,6 +11,7 @@ import javax.inject.Inject
 import kotlin.random.Random
 
 class GameManager @Inject constructor(private val repository: GameManagerRepository) {
+
     private val _cells = MutableStateFlow<List<List<Cell>>>(emptyList())
     val cells: StateFlow<List<List<Cell>>> = _cells
 
@@ -73,7 +74,6 @@ class GameManager @Inject constructor(private val repository: GameManagerReposit
         _stepsCount.value++
 
         checkGameOver()
-
 
         Log.d("GameLoop", "Step completed in $elapsedTimeMillis millis")
     }
