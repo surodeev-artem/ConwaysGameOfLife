@@ -6,9 +6,10 @@ import com.surodeevartem.conwaysgameoflife.entity.LifecycleState
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import javax.inject.Inject
 import kotlin.random.Random
 
-class GameManager {
+class GameManager @Inject constructor() {
     private val _cells = MutableStateFlow<List<List<Cell>>>(emptyList())
     val cells: StateFlow<List<List<Cell>>> = _cells
 
