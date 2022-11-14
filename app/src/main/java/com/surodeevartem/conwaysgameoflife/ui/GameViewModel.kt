@@ -39,6 +39,12 @@ class GameViewModel @Inject constructor(private val gameManager: GameManager) : 
                 gameState = gameState.copy(stepsCount = it)
             }
         }
+
+        viewModelScope.launch {
+            gameManager.highScore.collect {
+                gameState = gameState.copy(highScore = it)
+            }
+        }
     }
 
     fun randomizeGameField() {

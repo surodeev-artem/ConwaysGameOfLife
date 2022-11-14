@@ -3,13 +3,14 @@ package com.surodeevartem.conwaysgameoflife.domain
 import android.util.Log
 import com.surodeevartem.conwaysgameoflife.entity.Cell
 import com.surodeevartem.conwaysgameoflife.entity.LifecycleState
+import com.surodeevartem.conwaysgameoflife.repository.GameManagerRepository
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import javax.inject.Inject
 import kotlin.random.Random
 
-class GameManager @Inject constructor() {
+class GameManager @Inject constructor(private val repository: GameManagerRepository) {
     private val _cells = MutableStateFlow<List<List<Cell>>>(emptyList())
     val cells: StateFlow<List<List<Cell>>> = _cells
 
@@ -18,6 +19,9 @@ class GameManager @Inject constructor() {
 
     private val _stepsCount = MutableStateFlow(0)
     val stepsCount: StateFlow<Int> = _stepsCount
+
+    private val _highScore = MutableStateFlow(repository.getHighScore())
+    val highScore: StateFlow<Int> = _highScore
 
     private val stepsHashcode: MutableList<Int> = mutableListOf()
 
@@ -66,9 +70,10 @@ class GameManager @Inject constructor() {
         val delayTimeMillis = STEP_TIME_MILLIS - elapsedTimeMillis
         delay(delayTimeMillis)
 
+        _stepsCount.value++
+
         checkGameOver()
 
-        _stepsCount.value++
 
         Log.d("GameLoop", "Step completed in $elapsedTimeMillis millis")
     }
@@ -102,22 +107,28 @@ class GameManager @Inject constructor() {
     }
 
     private fun checkGameOver() {
-        checkStepRetrying()
-        checkForLivingCells()
+        if (checkStepRetrying() || checkForLivingCells()) {
+            _lifecycleState.value = LifecycleState.GAME_OVER
+            if (stepsCount.value > repository.getHighScore()) {
+                repository.setHighScore(stepsCount.value)
+                _highScore.value = stepsCount.value
+            }
+        }
     }
 
-    private fun checkStepRetrying() {
+    private fun checkStepRetrying(): Boolean {
         val stepHashcode = _cells.value.hashCode()
-        if (stepsHashcode.contains(stepHashcode)) _lifecycleState.value = LifecycleState.GAME_OVER
+        if (stepsHashcode.contains(stepHashcode)) return true
         stepsHashcode.add(stepHashcode)
+        return false
     }
 
-    private fun checkForLivingCells() {
+    private fun checkForLivingCells(): Boolean {
         var hasLivingCells = false
         _cells.value.flatten().forEach { cell ->
             if (cell.isAlive) hasLivingCells = true
         }
-        if (!hasLivingCells) _lifecycleState.value = LifecycleState.GAME_OVER
+        return !hasLivingCells
     }
 
 
