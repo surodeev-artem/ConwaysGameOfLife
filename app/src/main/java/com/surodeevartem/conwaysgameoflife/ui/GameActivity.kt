@@ -5,7 +5,6 @@ import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.Canvas
-import androidx.compose.foundation.background
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -20,20 +19,23 @@ import androidx.compose.material.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.surodeevartem.conwaysgameoflife.R
 import com.surodeevartem.conwaysgameoflife.domain.GameManager
 import com.surodeevartem.conwaysgameoflife.entity.Cell
 import com.surodeevartem.conwaysgameoflife.entity.LifecycleState
 import com.surodeevartem.conwaysgameoflife.ui.theme.ConwaysGameOfLifeTheme
-import com.surodeevartem.conwaysgameoflife.ui.theme.GameFieldBackgroundDark
-import com.surodeevartem.conwaysgameoflife.ui.theme.GameFieldBackgroundLight
+import com.surodeevartem.conwaysgameoflife.ui.theme.DeadCellLight
+import com.surodeevartem.conwaysgameoflife.ui.theme.ScoreFont
 import dagger.hilt.android.AndroidEntryPoint
 
 @AndroidEntryPoint
@@ -61,30 +63,17 @@ fun Content(viewModel: GameViewModel = viewModel(), gameOverCallback: () -> Unit
         val cells = viewModel.gameState.cells
         val lifecycleState = viewModel.gameState.lifecycleState
         val stepsCount = viewModel.gameState.stepsCount
+        val highScore = viewModel.gameState.highScore
         val darkThemeEnabled = isSystemInDarkTheme()
 
         if (lifecycleState == LifecycleState.GAME_OVER) {
             gameOverCallback()
         }
 
-        StepsCountText(darkThemeEnabled, stepsCount)
+        ScoresText(stepsCount, highScore)
 
         GameField(
             Modifier
-                .background(
-                    if (darkThemeEnabled)
-                        Brush.verticalGradient(
-                            0f to GameFieldBackgroundDark,
-                            0.5f to GameFieldBackgroundDark,
-                            1f to MaterialTheme.colors.background
-                        )
-                    else
-                        Brush.verticalGradient(
-                            0f to GameFieldBackgroundLight,
-                            0.5f to GameFieldBackgroundLight,
-                            1f to MaterialTheme.colors.background
-                        )
-                )
                 .padding(16.dp)
                 .weight(1f)
                 .fillMaxWidth(),
@@ -135,18 +124,37 @@ fun Content(viewModel: GameViewModel = viewModel(), gameOverCallback: () -> Unit
 }
 
 @Composable
-fun StepsCountText(darkThemeEnabled: Boolean, stepsCount: Int) {
+fun ScoresText(score: Int, highScore: Int) {
+    Row(modifier = Modifier.fillMaxWidth()) {
+        ScoreText(
+            title = stringResource(R.string.score),
+            value = score,
+            modifier = Modifier
+                .weight(1f)
+                .align(Alignment.CenterVertically)
+                .padding(16.dp)
+        )
+
+        ScoreText(
+            title = stringResource(R.string.high_score),
+            value = highScore,
+            modifier = Modifier
+                .weight(1f)
+                .align(Alignment.CenterVertically)
+                .padding(16.dp)
+        )
+    }
+}
+
+@Composable
+fun ScoreText(title: String, value: Int, modifier: Modifier) {
     Text(
-        text = String.format(stringResource(R.string.steps_count), stepsCount), modifier = Modifier
-            .fillMaxWidth()
-            .background(
-                if (darkThemeEnabled) {
-                    GameFieldBackgroundDark
-                } else {
-                    GameFieldBackgroundLight
-                }
-            )
-            .padding(16.dp)
+        text = String.format(title, value),
+        modifier = modifier,
+        textAlign = TextAlign.Center,
+        fontFamily = ScoreFont,
+        fontWeight = FontWeight.Bold,
+        fontSize = 24.sp
     )
 }
 
@@ -163,7 +171,7 @@ fun GameField(modifier: Modifier, darkThemeEnabled: Boolean, cells: List<List<Ce
 
         for (x in cells.indices) {
             for (y in cells[x].indices) {
-                drawRect(
+                drawRoundRect(
                     color = if (cells[x][y].isAlive) {
                         if (darkThemeEnabled) {
                             Color.White
@@ -174,14 +182,15 @@ fun GameField(modifier: Modifier, darkThemeEnabled: Boolean, cells: List<List<Ce
                         if (darkThemeEnabled) {
                             Color.Black
                         } else {
-                            Color.White
+                            DeadCellLight
                         }
                     },
                     topLeft = Offset(
                         x = x * cellSize + x * cellsGapSize,
                         y = y * cellSize + y * cellsGapSize
                     ),
-                    size = Size(cellSize, cellSize)
+                    size = Size(cellSize, cellSize),
+                    cornerRadius = CornerRadius(8f, 8f)
                 )
             }
         }
