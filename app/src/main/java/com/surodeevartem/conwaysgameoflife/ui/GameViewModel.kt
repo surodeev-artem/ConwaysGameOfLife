@@ -14,11 +14,9 @@ import javax.inject.Inject
 
 
 @HiltViewModel
-class GameViewModel @Inject constructor() : ViewModel() {
+class GameViewModel @Inject constructor(private val gameManager: GameManager) : ViewModel() {
     var gameState by mutableStateOf(GameState())
         private set
-
-    private val gameManager = GameManager()
 
     init {
         randomizeGameField()
@@ -38,6 +36,12 @@ class GameViewModel @Inject constructor() : ViewModel() {
         viewModelScope.launch {
             gameManager.stepsCount.collect {
                 gameState = gameState.copy(stepsCount = it)
+            }
+        }
+
+        viewModelScope.launch {
+            gameManager.highScore.collect {
+                gameState = gameState.copy(highScore = it)
             }
         }
     }
